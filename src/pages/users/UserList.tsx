@@ -1,10 +1,10 @@
-// src/pages/users/UserList.tsx
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from '../../api/axiosConfig';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { User, Plus, Search } from 'lucide-react';
+import { User, Plus, Search, Trash2, Edit } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 interface UserData {
     _id: string;
@@ -25,9 +25,10 @@ const UserList = () => {
             try {
                 setLoading(true);
                 const { data } = await axios.get('/api/users');
-                setUsers(data.users);
+                setUsers(data);
             } catch (err: any) {
                 setError(err.response?.data?.message || 'Failed to fetch users');
+                toast.error('Failed to fetch users');
             } finally {
                 setLoading(false);
             }
@@ -35,6 +36,26 @@ const UserList = () => {
 
         fetchUsers();
     }, []);
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Are you sure you want to delete this user?')) {
+            return;
+        }
+
+        try {
+            await axios.delete(`/api/users/${id}`);
+            setUsers(users.filter(user => user._id !== id));
+            toast.success('User deleted successfully');
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to delete user');
+        }
+    };
+
+    const filteredUsers = users.filter((user) =>
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.role.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     if (loading) {
         return (
@@ -56,21 +77,13 @@ const UserList = () => {
         );
     }
 
-    const filteredUsers = users.filter((user) =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.role.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-semibold text-gray-900">Users</h1>
-                <Button variant="primary">
-                    <Link to="/users/new" className="flex items-center">
-                        <Plus className="mr-2 h-4 w-4" />
-                        New User
-                    </Link>
+                <Button variant="primary" as={Link} to="/users/new">
+                    <Plus className="mr-2 h-4 w-4" />
+                    New User
                 </Button>
             </div>
 
@@ -102,9 +115,6 @@ const UserList = () => {
                                     Role
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Last Login
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Actions
                                 </th>
                             </tr>
@@ -125,21 +135,30 @@ const UserList = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                                            user.role === 'manager' ? 'bg-blue-100 text-blue-800' :
-                                                'bg-green-100 text-green-800'
+                                                user.role === 'manager' ? 'bg-blue-100 text-blue-800' :
+                                                    'bg-green-100 text-green-800'
                                             }`}>
                                             {user.role}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {new Date(user.lastLogin).toLocaleString()}
-                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <Button variant="outline" size="sm">
-                                            <Link to={`/users/${user._id}/edit`}>
-                                                Edit
-                                            </Link>
-                                        </Button>
+                                        <div className="flex space-x-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                as={Link}
+                                                to={`/users/${user._id}/edit`}
+                                            >
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="danger"
+                                                size="sm"
+                                                onClick={() => handleDelete(user._id)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

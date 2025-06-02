@@ -4,7 +4,8 @@ import axios from '../../api/axiosConfig';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import ShipmentStatusBadge from '../../components/ShipmentStatusBadge';
-import { Package, Plus, Search } from 'lucide-react';
+import { Package, Plus, Search, Trash2, Edit } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 interface Shipment {
   _id: string;
@@ -33,6 +34,7 @@ const ShipmentList = () => {
         setShipments(data.shipments);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to fetch shipments');
+        toast.error('Failed to fetch shipments');
       } finally {
         setLoading(false);
       }
@@ -40,6 +42,27 @@ const ShipmentList = () => {
 
     fetchShipments();
   }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this shipment?')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`/api/shipments/${id}`);
+      setShipments(shipments.filter(shipment => shipment._id !== id));
+      toast.success('Shipment deleted successfully');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to delete shipment');
+    }
+  };
+
+  const filteredShipments = shipments.filter((shipment) =>
+    shipment.shipmentNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    shipment.origin.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    shipment.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    shipment.carrier.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -60,13 +83,6 @@ const ShipmentList = () => {
       </div>
     );
   }
-
-  const filteredShipments = shipments.filter((shipment) =>
-    shipment.shipmentNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    shipment.origin.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    shipment.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    shipment.carrier.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="space-y-6">
@@ -145,14 +161,31 @@ const ShipmentList = () => {
                     {shipment.batteries.length}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      as={Link}
-                      to={`/shipments/${shipment._id}`}
-                    >
-                      View
-                    </Button>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        as={Link}
+                        to={`/shipments/${shipment._id}`}
+                      >
+                        View
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        as={Link}
+                        to={`/shipments/${shipment._id}/edit`}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleDelete(shipment._id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
